@@ -14,7 +14,8 @@ object Carver {
         try {
             val inFile = File(args.findArgValue("-in"))
             val outFile = File(args.findArgValue("-out"))
-            ImageIO.write(ImageIO.read(inFile).intensityMap(), "png", outFile)
+//            ImageIO.write(ImageIO.read(inFile).intensityMap(), "png", outFile)
+            ImageIO.read(inFile).findSeam()
         }
         catch (e: CarverException) {
             println(e.message)
@@ -30,24 +31,13 @@ object Carver {
         else return this[argIndex + 1]
     }
 
-    private fun invert(src: File): BufferedImage {
-        val invertedImage = ImageIO.read(src) ?: throw CarverException("Couldn't read $src")
-        for (x in 0 until invertedImage.width) {
-            for (y in 0 until invertedImage.height) {
-                val originalColor = Color(invertedImage.getRGB(x, y))
-                val invertedColor = Color(255 - originalColor.red, 255 - originalColor.green, 255 - originalColor.blue)
-                invertedImage.setRGB(x, y, invertedColor.rgb)
-            }
-        }
-        return invertedImage
-    }
-
     private fun BufferedImage.intensityMap(): BufferedImage {
         var maxEnergyValue = Double.MIN_VALUE
         val energyGrid = Array(this.width) { Array (this.height) {0.0} }
 
         val intenseImage = BufferedImage(this.width, this.height, BufferedImage.TYPE_INT_RGB)
 
+        // find maxEnergyValue
         for (x in 0 until this.width) {
             for (y in 0 until this.height) {
                 energyGrid[x][y] = this.energyOf(x, y)
@@ -55,6 +45,7 @@ object Carver {
             }
         }
 
+        //write intensityMap to image
         for (x in 0 until this.width) {
             for (y in 0 until this.height) {
                 val normalizedIntensity = (255.0 * energyGrid[x][y] / maxEnergyValue).toInt()
@@ -63,6 +54,46 @@ object Carver {
         }
 
         return intenseImage
+    }
+
+    private fun BufferedImage.findSeam(): List<Int> {
+        var maxEnergyValue = Double.MIN_VALUE
+        val energyGrid = Array(this.height) { Array (this.width) {0.0} }
+        val weightGrid = Array(this.height) { Array (this.width) {0} }
+
+        val intenseImage = BufferedImage(this.width, this.height, BufferedImage.TYPE_INT_RGB)
+
+        // find maxEnergyValue
+        for (row in 0 until this.height) {
+            for (col in 0 until this.width) {
+                energyGrid[row][col] = this.energyOf(col, row)
+                maxEnergyValue = if (energyGrid[row][col] > maxEnergyValue) energyGrid[row][col] else maxEnergyValue
+            }
+        }
+
+        //write intensityMap to weightGrid
+        for (row in 0 until this.height) {
+                for (col in 0 until this.width) {
+                    weightGrid[row][col] = (255.0 * energyGrid[row][col] / maxEnergyValue).toInt()
+            }
+        }
+
+        //print weightGrid w/ 0 top/bottom rows
+        for (row in weightGrid.indices) {
+            for (col in weightGrid[row].indices) {
+                print("${weightGrid[row][col]} ")
+            }
+            println()
+        }
+
+        return  emptyList()
+    }
+
+    private fun path(passedMap: Array<Array<Int>>): List<Pair<Int, Int>> {
+        val funMap: Array<Array<Int?>> = Array(passedMap.size) { Array(passedMap[it].size) { null } }
+        //TODO pathing
+
+        return emptyList()
     }
 
     private fun BufferedImage.energyOf(passedX: Int, passedY: Int): Double {
