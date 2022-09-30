@@ -1,5 +1,20 @@
 # Hyperskill_Kotlin_Seam Carving
 
+### Stage 6/6: Resize
+
+I fear I'm getting ill. Headaches, exhaustion. All around I'm just not feeling very well.
+I realize that has little to do with the project, but I wanted to write it somewhere.
+
+At first this last portion seemed very easy to implement. Instead of drawing a red line over the seam, shift pixels over to cover the seam and return the given image -1 width.
+It worked. But for larger images was taking far, far too long. I looked into seam-carving algorithms and discovered my method of calculating the seam was inefficient. Once updated the issue went away, and things appear to be working fine.
+
+I admit the code could be cleaner. The lack of polish is a sacrifice I took to make sure the project gets done in a reasonable time.
+
+That's all for now. I need some rest. Hopefully I feel better, soon.
+
+Ciao,\
+-Abigail
+
 ### Stage 5/6: Horizontal seam
 
 This one's easy since we made code for a vertical seam already.
