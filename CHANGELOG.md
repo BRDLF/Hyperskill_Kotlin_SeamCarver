@@ -1,5 +1,9 @@
 # Hyperskill_Kotlin_Seam Carving
 
+### Stage 4/6: Find the seam
+
+Program now finds and draws the seam. A line from the top of the image to the bottom of the image that has the lowest energy among pixels travelled.
+
 ### Stage 3/6: Look at energy
 
 Program no longer returns image negative. Now returns an energy map of the image based on dual-gradient energy function.

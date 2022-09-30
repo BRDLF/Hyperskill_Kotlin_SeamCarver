@@ -1,5 +1,11 @@
 # Hyperskill_Kotlin_Seam Carving
 
+### Stage 4/6: Find the seam
+
+This took a bit longer than I wanted to. Events in my personal life postponed progress. Everything was simple enough, though. I haven't had to touch shortest path algorithms in a while, so it was nice to get a refresher.
+
+I accidentally weighted the path on intensity instead of energy, which caused a problem, but otherwise everything turned out alright.
+
 ### Stage 3/6: Look at energy
 
 Once again, I did not read the question thoroughly and caused myself unnecessary woe.
