@@ -1,5 +1,9 @@
 # Hyperskill_Kotlin_Seam Carving
 
+### Stage 5/6: Horizontal seam
+
+Program now finds and draws a horizontal seam.
+
 ### Stage 4/6: Find the seam
 
 Program now finds and draws the seam. A line from the top of the image to the bottom of the image that has the lowest energy among pixels travelled.

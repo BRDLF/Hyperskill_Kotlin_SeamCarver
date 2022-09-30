@@ -19,7 +19,7 @@ object Carver {
         try {
             val inFile = File(args.findArgValue("-in"))
             val outFile = File(args.findArgValue("-out"))
-            ImageIO.write(ImageIO.read(inFile).printSeam(), "png", outFile)
+            ImageIO.write(ImageIO.read(inFile).horizontalSeam(), "png", outFile)
         }
         catch (e: CarverException) {
             println(e.message)
@@ -34,7 +34,19 @@ object Carver {
         else return this[argIndex + 1]
     }
 
-    private fun BufferedImage.printSeam(): BufferedImage {
+    private fun BufferedImage.transpose(): BufferedImage {
+        val returnImage = BufferedImage(this.height, this.width, BufferedImage.TYPE_INT_RGB)
+        for (col in 0 until this.width) {
+            for (row in 0 until this.height) {
+                returnImage.setRGB(row,col, this.getRGB(col, row))
+            }
+        }
+        return returnImage
+    }
+    private fun BufferedImage.horizontalSeam(): BufferedImage {
+        return this.transpose().verticalSeam().transpose()
+    }
+    private fun BufferedImage.verticalSeam(): BufferedImage {
         val nodeMap: Array<Array<Node>> = Array(this.height) { row -> Array(this.width) { col -> Node(row, col, this.energyOf(passedX = col, passedY = row))} }
 
         fun Node.getNeighbors(): List<Node> {
@@ -48,7 +60,7 @@ object Carver {
 
             return neighborList
         } //returns the 2-3 nodes below the current node
-
+        
         fun MutableList<Node>.shortestPath(): Node {
             this.forEach{it.distance = it.weight}
             while (this.isNotEmpty()) {
@@ -87,16 +99,8 @@ object Carver {
         if (passedX < 0 || passedX >= this.width) throw CarverException("Given x of $passedX is out of bounds")
         if (passedY < 0 || passedY >= this.height) throw CarverException("Given y of $passedY is out of bounds")
         //Adjust for border values
-        val adjustX = when (passedX) {
-            0 -> 1
-            this.width - 1 -> passedX - 1
-            else -> passedX
-        }
-        val adjustY = when (passedY) {
-            0 -> 1
-            this.height - 1 -> passedY - 1
-            else -> passedY
-        }
+        val adjustX = passedX.coerceIn(1, this.width - 2)
+        val adjustY = passedY.coerceIn(1, this.height - 2)
 
         val leftPixel = Color(this.getRGB(adjustX - 1, passedY ))
         val rightPixel = Color(this.getRGB(adjustX + 1, passedY ))
