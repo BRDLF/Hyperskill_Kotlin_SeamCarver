@@ -9,18 +9,21 @@ import kotlin.math.sqrt
 class CarverException(message: String?) : RuntimeException(message)
 
 object Carver {
+    class Node(val row: Int, val col: Int, val weight: Double){
+        var parent: Node? = null
+        var distance: Double = Double.MAX_VALUE
+        var processed = false
+    }
 
     fun carve(args: Array<String>) {
         try {
             val inFile = File(args.findArgValue("-in"))
             val outFile = File(args.findArgValue("-out"))
-//            ImageIO.write(ImageIO.read(inFile).intensityMap(), "png", outFile)
-            ImageIO.read(inFile).findSeam()
+            ImageIO.write(ImageIO.read(inFile).printSeam(), "png", outFile)
         }
         catch (e: CarverException) {
             println(e.message)
         }
-
     }
 
     private fun Array<String>.findArgValue(arg: String): String {
@@ -31,69 +34,52 @@ object Carver {
         else return this[argIndex + 1]
     }
 
-    private fun BufferedImage.intensityMap(): BufferedImage {
-        var maxEnergyValue = Double.MIN_VALUE
-        val energyGrid = Array(this.width) { Array (this.height) {0.0} }
+    private fun BufferedImage.printSeam(): BufferedImage {
+        val nodeMap: Array<Array<Node>> = Array(this.height) { row -> Array(this.width) { col -> Node(row, col, this.energyOf(passedX = col, passedY = row))} }
 
-        val intenseImage = BufferedImage(this.width, this.height, BufferedImage.TYPE_INT_RGB)
+        fun Node.getNeighbors(): List<Node> {
+            if (this.row == nodeMap.lastIndex) return emptyList() //no neighbors if on the final line
+            if ((this.row !in nodeMap.indices) || (this.col !in nodeMap[this.row].indices)) throw CarverException("in getNeighbors(); passed illegal Node")
 
-        // find maxEnergyValue
-        for (x in 0 until this.width) {
-            for (y in 0 until this.height) {
-                energyGrid[x][y] = this.energyOf(x, y)
-                maxEnergyValue = if (energyGrid[x][y] > maxEnergyValue) energyGrid[x][y] else maxEnergyValue
+            val neighborList = mutableListOf<Node>()
+            neighborList.add(nodeMap[this.row + 1][this.col])
+            if (this.col != 0) neighborList.add(nodeMap[this.row + 1][this.col - 1])
+            if (this.col != nodeMap[0].lastIndex) neighborList.add(nodeMap[this.row + 1][this.col + 1])
+
+            return neighborList
+        } //returns the 2-3 nodes below the current node
+
+        fun MutableList<Node>.shortestPath(): Node {
+            this.forEach{it.distance = it.weight}
+            while (this.isNotEmpty()) {
+                this.sortBy { it.distance }
+                val evalNode = this.first()
+                if (evalNode.row == nodeMap.lastIndex) {
+                    return evalNode
+                }
+                for (neighbor in evalNode.getNeighbors()) {    //take all neighbors
+                    if (neighbor.weight + evalNode.distance < neighbor.distance) {      //check whether distance is shorter than current dist
+                        neighbor.parent = evalNode
+                        neighbor.distance = neighbor.weight + evalNode.distance
+                    }
+                    if (!neighbor.processed && !this.contains(neighbor)) this.add(neighbor)
+                }
+                evalNode.processed = true
+                this.remove(evalNode)
             }
+            return Node(-1,-1,-0.0)
         }
 
-        //write intensityMap to image
-        for (x in 0 until this.width) {
-            for (y in 0 until this.height) {
-                val normalizedIntensity = (255.0 * energyGrid[x][y] / maxEnergyValue).toInt()
-                intenseImage.setRGB(x, y, Color(normalizedIntensity, normalizedIntensity, normalizedIntensity).rgb)
-            }
+        val seamList = mutableListOf(nodeMap[0].toMutableList().shortestPath())
+        while (true) {
+            seamList.add(seamList.last().parent?: break) //adds to seamList until we've reached the top of the image, breaks if parent is null (initial value of Node.parent)
         }
 
-        return intenseImage
-    }
-
-    private fun BufferedImage.findSeam(): List<Int> {
-        var maxEnergyValue = Double.MIN_VALUE
-        val energyGrid = Array(this.height) { Array (this.width) {0.0} }
-        val weightGrid = Array(this.height) { Array (this.width) {0} }
-
-        val intenseImage = BufferedImage(this.width, this.height, BufferedImage.TYPE_INT_RGB)
-
-        // find maxEnergyValue
-        for (row in 0 until this.height) {
-            for (col in 0 until this.width) {
-                energyGrid[row][col] = this.energyOf(col, row)
-                maxEnergyValue = if (energyGrid[row][col] > maxEnergyValue) energyGrid[row][col] else maxEnergyValue
-            }
+        for (node in seamList) {
+            this.setRGB(node.col, node.row, Color(255, 0, 0).rgb)
         }
 
-        //write intensityMap to weightGrid
-        for (row in 0 until this.height) {
-                for (col in 0 until this.width) {
-                    weightGrid[row][col] = (255.0 * energyGrid[row][col] / maxEnergyValue).toInt()
-            }
-        }
-
-        //print weightGrid w/ 0 top/bottom rows
-        for (row in weightGrid.indices) {
-            for (col in weightGrid[row].indices) {
-                print("${weightGrid[row][col]} ")
-            }
-            println()
-        }
-
-        return  emptyList()
-    }
-
-    private fun path(passedMap: Array<Array<Int>>): List<Pair<Int, Int>> {
-        val funMap: Array<Array<Int?>> = Array(passedMap.size) { Array(passedMap[it].size) { null } }
-        //TODO pathing
-
-        return emptyList()
+        return this
     }
 
     private fun BufferedImage.energyOf(passedX: Int, passedY: Int): Double {
