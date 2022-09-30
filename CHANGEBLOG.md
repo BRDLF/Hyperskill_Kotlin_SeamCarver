@@ -1,5 +1,10 @@
 # Hyperskill_Kotlin_Seam Carving
 
+### Stage 5/6: Horizontal seam
+
+This one's easy since we made code for a vertical seam already.
+Just transpose the image along its diagonal, run the vertical seam, then transpose it again. 
+
 ### Stage 4/6: Find the seam
 
 This took a bit longer than I wanted to. Events in my personal life postponed progress. Everything was simple enough, though. I haven't had to touch shortest path algorithms in a while, so it was nice to get a refresher.
