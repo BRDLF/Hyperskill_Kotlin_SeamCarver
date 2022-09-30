@@ -12,14 +12,18 @@ object Carver {
     class Node(val row: Int, val col: Int, val weight: Double){
         var parent: Node? = null
         var distance: Double = Double.MAX_VALUE
-        var processed = false
     }
 
     fun carve(args: Array<String>) {
         try {
             val inFile = File(args.findArgValue("-in"))
             val outFile = File(args.findArgValue("-out"))
-            ImageIO.write(ImageIO.read(inFile).horizontalSeam(), "png", outFile)
+            val removeCols = args.findArgValue("-width").toIntOrNull()?: throw CarverException("value passed for \"-width\" must be an integer")
+            val removeRows = args.findArgValue("-height").toIntOrNull()?: throw CarverException("value passed for \"-height\" must be an integer")
+            var outImage = ImageIO.read(inFile)?: throw CarverException("$inFile could not be read!")
+            repeat(removeCols) { outImage = outImage.verticalSeam() }
+            repeat(removeRows) { outImage = outImage.horizontalSeam() }
+            ImageIO.write(outImage, "png", outFile)
         }
         catch (e: CarverException) {
             println(e.message)
@@ -47,51 +51,47 @@ object Carver {
         return this.transpose().verticalSeam().transpose()
     }
     private fun BufferedImage.verticalSeam(): BufferedImage {
-        val nodeMap: Array<Array<Node>> = Array(this.height) { row -> Array(this.width) { col -> Node(row, col, this.energyOf(passedX = col, passedY = row))} }
+        val nodeArray: Array<Array<Node>> = Array(this.height) { row -> Array(this.width) { col -> Node(row, col, this.energyOf(passedX = col, passedY = row))} }
 
         fun Node.getNeighbors(): List<Node> {
-            if (this.row == nodeMap.lastIndex) return emptyList() //no neighbors if on the final line
-            if ((this.row !in nodeMap.indices) || (this.col !in nodeMap[this.row].indices)) throw CarverException("in getNeighbors(); passed illegal Node")
+            if (this.row == nodeArray.lastIndex) return emptyList() //no neighbors if on the final line
+            if ((this.row !in nodeArray.indices) || (this.col !in nodeArray[this.row].indices)) throw CarverException("in getNeighbors(); passed illegal Node")
 
             val neighborList = mutableListOf<Node>()
-            neighborList.add(nodeMap[this.row + 1][this.col])
-            if (this.col != 0) neighborList.add(nodeMap[this.row + 1][this.col - 1])
-            if (this.col != nodeMap[0].lastIndex) neighborList.add(nodeMap[this.row + 1][this.col + 1])
+            neighborList.add(nodeArray[this.row + 1][this.col])
+            if (this.col != 0) neighborList.add(nodeArray[this.row + 1][this.col - 1])
+            if (this.col != nodeArray[0].lastIndex) neighborList.add(nodeArray[this.row + 1][this.col + 1])
 
             return neighborList
         } //returns the 2-3 nodes below the current node
-        
-        fun MutableList<Node>.shortestPath(): Node {
-            this.forEach{it.distance = it.weight}
-            while (this.isNotEmpty()) {
-                this.sortBy { it.distance }
-                val evalNode = this.first()
-                if (evalNode.row == nodeMap.lastIndex) {
-                    return evalNode
-                }
-                for (neighbor in evalNode.getNeighbors()) {    //take all neighbors
-                    if (neighbor.weight + evalNode.distance < neighbor.distance) {      //check whether distance is shorter than current dist
-                        neighbor.parent = evalNode
-                        neighbor.distance = neighbor.weight + evalNode.distance
-                    }
-                    if (!neighbor.processed && !this.contains(neighbor)) this.add(neighbor)
-                }
-                evalNode.processed = true
-                this.remove(evalNode)
+
+        //bottom-up fills distances
+        for (row in nodeArray.indices.reversed()) {
+            for (node in nodeArray[row]) {
+                node.distance = node.weight
+                val parentNode = node.getNeighbors().minByOrNull { it.distance }?: continue
+                node.parent = parentNode
+                node.distance += parentNode.distance
             }
-            return Node(-1,-1,-0.0)
         }
 
-        val seamList = mutableListOf(nodeMap[0].toMutableList().shortestPath())
-        while (true) {
-            seamList.add(seamList.last().parent?: break) //adds to seamList until we've reached the top of the image, breaks if parent is null (initial value of Node.parent)
+        var iterNode = nodeArray[0].toMutableList().minByOrNull { it.distance }?: throw CarverException("Empty Image?")
+        val colList = mutableListOf<Int>()
+        do {
+            colList.add(iterNode.col)
+            iterNode = iterNode.parent?: break
+        } while (iterNode.row < this.height - 1)
+
+        //shift left
+        for (row in colList.indices) {
+            val targetCol = colList[row]
+            if (targetCol == this.width - 1) continue
+            else for (col in targetCol until this.width - 1) {
+                this.setRGB(col, row, this.getRGB(col + 1, row))
+            }
         }
 
-        for (node in seamList) {
-            this.setRGB(node.col, node.row, Color(255, 0, 0).rgb)
-        }
-
-        return this
+        return this.getSubimage(0, 0, this.width - 1, this.height)
     }
 
     private fun BufferedImage.energyOf(passedX: Int, passedY: Int): Double {

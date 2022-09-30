@@ -1,5 +1,9 @@
 # Hyperskill_Kotlin_Seam Carving
 
+### Stage 6/6: Resize
+
+Program now takes arguments for number of vertical and horizontal seams to remove. Then outputs an image with the given number of seams removed.
+
 ### Stage 5/6: Horizontal seam
 
 Program now finds and draws a horizontal seam.
